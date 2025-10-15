@@ -104,21 +104,21 @@ async def check_delete_time(client: Bot, message: Message):
 @Bot.on_message(filters.command("setfile") & filters.private & admin)
 async def set_file_cmd(client: Bot, message: Message):
     if len(message.command) != 2:
-        return await message.reply_text("⚠️ Usage:\n`/setfile <number>`\nThen reply to a file.")
+        return await message.reply_text("⚠️ Usage:\n`/setfile <number>`\nTʜᴇɴ ʀᴇᴘʟʏ ᴛᴏ ᴀ ғɪʟᴇ.")
 
     key = message.command[1].strip()
     if not key.isdigit():
-        return await message.reply_text("❌ Only numbers are allowed as keys.")
+        return await message.reply_text("❌ Oɴʟʏ ɴᴜᴍʙᴇʀs ᴀʀᴇ ᴀʟʟᴏᴡᴇᴅ ᴀs ᴋᴇʏs.")
 
     if not message.reply_to_message:
-        return await message.reply_text("❌ Reply to a file to bind it.")
+        return await message.reply_text("❌ Rᴇᴘʟʏ ᴛᴏ ᴀ ғɪʟᴇ ᴛᴏ ʙɪɴᴅ ɪᴛ.")
 
     file_msg = message.reply_to_message
     if not (file_msg.document or file_msg.video or file_msg.audio or file_msg.photo):
-        return await message.reply_text("❌ Only media messages (video, document, audio, photo) are supported.")
+        return await message.reply_text("❌ Oɴʟʏ ᴍᴇᴅɪᴀ ᴍᴇssᴀɢᴇs (ᴠɪᴅᴇᴏ, ᴅᴏᴄᴜᴍᴇɴᴛ, ᴀᴜᴅɪᴏ, ᴘʜᴏᴛᴏ) ᴀʀᴇ sᴜᴘᴘᴏʀᴛᴇᴅ.")
 
     await db.set_file(key, file_msg.chat.id, file_msg.id)
-    await message.reply_text(f"✅ File saved for key `{key}`.")
+    await message.reply_text(f"✅ Fɪʟᴇ sᴀᴠᴇᴅ ғᴏʀ ᴋᴇʏ `{key}`.")
 
 
 # =========================
@@ -128,9 +128,9 @@ async def set_file_cmd(client: Bot, message: Message):
 async def list_files_cmd(client: Bot, message: Message):
     files = await db.list_files()
     if not files:
-        return await message.reply_text("📂 No files saved yet.")
+        return await message.reply_text("📂 Nᴏ ғɪʟᴇs sᴀᴠᴇᴅ ʏᴇᴛ.")
 
-    text = "📁 **Saved Files:**\n\n"
+    text = "📁 𝗦𝗮𝘃𝗲𝗱 𝗙𝗶𝗹𝗲:\n\n"
     for f in files:
         text += f"🔹 `{f['key']}` → [Message Link](https://t.me/c/{str(f['chat_id']).replace('-100','')}/{f['file_id']})\n"
     await message.reply_text(text, disable_web_page_preview=True)
@@ -147,9 +147,9 @@ async def delete_file_cmd(client: Bot, message: Message):
     key = message.command[1].strip()
     result = await db.delete_file(key)
     if result.deleted_count == 0:
-        return await message.reply_text(f"❌ No file found for key `{key}`.")
+        return await message.reply_text(f"❌ Nᴏ ғɪʟᴇ ғᴏᴜɴᴅ ғᴏʀ ᴋᴇʏ `{key}`.")
     
-    await message.reply_text(f"🗑 File for key `{key}` deleted successfully.")
+    await message.reply_text(f"🗑 Fɪʟᴇ ғᴏʀ ᴋᴇʏ `{key}` ᴅᴇʟᴇᴛᴇᴅ sᴜᴄᴄᴇssғᴜʟʟʏ.")
 
 
 # =========================
@@ -163,7 +163,7 @@ async def send_saved_file(client: Bot, message: Message):
 
     data = await db.get_file(text)
     if not data:
-        return await message.reply_text("❌ No file set for this number.")
+        return #await message.reply_text("❌ No file set for this number.")
 
     try:
         await client.copy_message(
