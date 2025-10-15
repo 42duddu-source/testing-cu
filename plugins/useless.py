@@ -22,9 +22,13 @@ from pyrogram.types import Message, InlineKeyboardMarkup, InlineKeyboardButton, 
 from pyrogram.errors.exceptions.bad_request_400 import UserNotParticipant
 from pyrogram.errors import FloodWait, UserIsBlocked, InputUserDeactivated, UserNotParticipant
 from bot import Bot
+from plugins.start import not_joined
 from config import *
 from helper_func import *
 from database.database import *
+
+
+BAN_SUPPORT = f"{BAN_SUPPORT}"
 
 #=====================================================================================##
 
