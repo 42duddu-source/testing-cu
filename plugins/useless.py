@@ -161,8 +161,7 @@ async def delete_file_cmd(client: Bot, message: Message):
 # =========================
 # /setfile Command (Supports Multiple Files per Key)
 # =========================
-# =========================
-# /setfile Command (Multi-message/File Batch)
+# /setfile Command (Multi-file ID Storage)
 # =========================
 @Bot.on_message(filters.command("setfile") & filters.private & admin)
 async def set_file_cmd(client: Bot, message: Message):
@@ -173,13 +172,13 @@ async def set_file_cmd(client: Bot, message: Message):
 
     key = message.command[1].strip()
     if not key.isdigit():
-        return await message.reply_text("❌ Oɴʟʏ ɴᴜᴍʙᴇʀs ᴀʀᴇ ᴀʟʟᴏᴡᴇᴅ ᴀs ᴋᴇʏs.")
+        return await message.reply_text("❌ Only numbers are allowed as keys.")
 
     collected = []
     STOP_KEYBOARD = ReplyKeyboardMarkup([["STOP"]], resize_keyboard=True)
 
     await message.reply(
-        "Send all messages/files you want to include under this key.\n\n"
+        "Send all media messages you want to include under this key.\n\n"
         "Press STOP when you're done.",
         reply_markup=STOP_KEYBOARD
     )
@@ -188,8 +187,8 @@ async def set_file_cmd(client: Bot, message: Message):
         try:
             user_msg = await client.ask(
                 chat_id=message.chat.id,
-                text="Waiting for files/messages...\nPress STOP to finish.",
-                timeout=30  # Wait 30 seconds for each message
+                text="Waiting for media messages...\nPress STOP to finish.",
+                timeout=30  # wait 30 seconds per message
             )
         except asyncio.TimeoutError:
             break
@@ -198,28 +197,37 @@ async def set_file_cmd(client: Bot, message: Message):
         if user_msg.text and user_msg.text.strip().upper() == "STOP":
             break
 
-        # Only store media or text (optional: skip plain text if needed)
-        if not (user_msg.document or user_msg.video or user_msg.audio or user_msg.photo or user_msg.text):
+        # Only store media messages
+        if not (user_msg.document or user_msg.video or user_msg.audio or user_msg.photo):
             await message.reply("❌ Unsupported message type, ignored.")
             continue
 
-        try:
-            # Copy message to your DB channel
-            sent = await user_msg.copy(client.db_channel.id, disable_notification=True)
-            collected.append(sent.id)
-        except Exception as e:
-            await message.reply(f"❌ Failed to store message:\n<code>{e}</code>")
+        # Store file ID only
+        if user_msg.document:
+            fid = user_msg.document.file_id
+        elif user_msg.video:
+            fid = user_msg.video.file_id
+        elif user_msg.audio:
+            fid = user_msg.audio.file_id
+        elif user_msg.photo:
+            # photo is a list of sizes, take the highest quality
+            fid = user_msg.photo[-1].file_id
+        else:
+            continue
+
+        collected.append((user_msg.chat.id, fid))
+        await message.reply(f"✅ File added ({len(collected)} total)")
 
     await message.reply("✅ Batch collection complete.", reply_markup=ReplyKeyboardRemove())
 
     if not collected:
-        return await message.reply("❌ No messages were added to this key.")
+        return await message.reply("❌ No media messages were added to this key.")
 
-    # Save collected IDs under the key in MongoDB
-    for msg_id in collected:
-        await db.add_file_to_key(key, client.db_channel.id, msg_id)
+    # Save all collected file IDs under the same key
+    for chat_id, fid in collected:
+        await db.add_file_to_key(key, chat_id, fid)
 
-    await message.reply(f"✅ All collected messages/files saved under key `{key}`.")
+    await message.reply(f"✅ All collected media messages saved under key `{key}`.")
 
 
 # =========================
