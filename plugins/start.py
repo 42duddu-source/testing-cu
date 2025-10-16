@@ -227,7 +227,7 @@ async def not_joined(client: Client, message: Message):
                     )
 
         # ✅ Retry Button (safe for text or command messages)
-        retry_url = f"https://t.me/{client.username}"
+        retry_url = f"https://t.me/{client.username}?start"
         if getattr(message, "command", None) and len(message.command) > 1:
             retry_url += f"?start={message.command[1]}"
 
