@@ -12,45 +12,46 @@ from helper_func import *
 
 @Bot.on_message(filters.private & admin & ~filters.command(['start', 'commands','users','broadcast','batch', 'custom_batch', 'genlink','stats', 'dlt_time', 'check_dlt_time', 'ban', 'unban', 'banlist', 'addchnl', 'delchnl', 'listchnl', 'fsub_mode', 'add_admin', 'deladmin', 'admins', 'delreq', 'cancel', 'setfile', 'listfile', 'delfile', 'update', 'batchfile']))
 async def send_saved_file(client: Bot, message: Message):
+    
     text = message.text.strip()
-    if not text:
-        return
-    if text.startswith("/"):
-        return
-    if not text.isdigit():
+    if text.startswith("/") or not text.isdigit():
         return
 
     data = await db.get_file(text)
     if not data:
-        return await message.reply_text("❌ No file set for this number.")
+        return await message.reply_text("❌ Nᴏ ғɪʟᴇ sᴇᴛ ғᴏʀ ᴛʜɪs ɴᴜᴍʙᴇʀ.")
 
     try:
-        # Send file to user
-        sent = await client.copy_message(
-            chat_id=message.chat.id,
-            from_chat_id=data["chat_id"],
-            message_id=data["file_id"]
-        )
-
-        # Check auto-delete timer
         FILE_AUTO_DELETE = await db.get_del_timer()
+
+        sent_msgs = []
+        for fid in data["file_ids"]:
+            sent = await client.copy_message(
+                chat_id=message.chat.id,
+                from_chat_id=data["chat_id"],
+                message_id=fid
+            )
+            sent_msgs.append(sent)
 
         if FILE_AUTO_DELETE > 0:
             notification_msg = await message.reply(
-                f"<b><blockqoute>Tʜɪs Fɪʟᴇ ᴡɪʟʟ ʙᴇ Dᴇʟᴇᴛᴇᴅ ɪɴ {get_exp_time(FILE_AUTO_DELETE)}.\n"
-                f"Pʟᴇᴀsᴇ sᴀᴠᴇ ᴏʀ ғᴏʀᴡᴀʀᴅ ɪᴛ ᴛᴏ ʏᴏᴜʀ sᴀᴠᴇᴅ ᴍᴇssᴀɢᴇs ʙᴇғᴏʀᴇ ɪᴛ ɢᴇᴛs Dᴇʟᴇᴛᴇᴅ.</blockqoute></b>"
+                f"<b><blockquote>Tʜɪs Fɪʟᴇ(s) ᴡɪʟʟ ʙᴇ Dᴇʟᴇᴛᴇᴅ ɪɴ {get_exp_time(FILE_AUTO_DELETE)}.\n"
+                f"Pʟᴇᴀsᴇ sᴀᴠᴇ ᴏʀ ғᴏʀᴡᴀʀᴅ ᴛʜᴇᴍ ʙᴇғᴏʀᴇ ɪᴛs Dᴇʟᴇᴛᴇᴅ.</blockquote></b>"
             )
 
-            # Wait and delete file + notification
-            await sleep(FILE_AUTO_DELETE)
+            await asyncio.sleep(FILE_AUTO_DELETE)
+            for s in sent_msgs:
+                try:
+                    await s.delete()
+                except:
+                    pass
             try:
-                await sent.delete()
                 await notification_msg.delete()
             except:
                 pass
 
     except Exception as e:
-        await message.reply_text(f"⚠️ Failed to send file:\n`{e}`")
+        await message.reply_text(f"⚠️ Failed to send file(s):\n`{e}`")
 
 #async def channel_post(client: Client, message: Message):
     #return
