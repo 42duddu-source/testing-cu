@@ -188,6 +188,8 @@ async def send_saved_file(client: Bot, message: Message):
         return await not_joined(client, message)
 
     text = message.text.strip()
+    if text.startswith("/"):
+        return
     if not text.isdigit():
         return
 
