@@ -156,18 +156,14 @@ async def delete_file_cmd(client: Bot, message: Message):
     
     await message.reply_text(f"🗑 Fɪʟᴇ ғᴏʀ ᴋᴇʏ `{key}` ᴅᴇʟᴇᴛᴇᴅ sᴜᴄᴄᴇssғᴜʟʟʏ.")"""
 
-
-
 # =========================
-# /setfile Command (Supports Multiple Files per Key)
-# =========================
-# /setfile Command (Multi-file ID Storage)
+# /setfile Command (Multi-file Input)
 # =========================
 @Bot.on_message(filters.command("setfile") & filters.private & admin)
 async def set_file_cmd(client: Bot, message: Message):
     if len(message.command) != 2:
         return await message.reply_text(
-            "⚠️ Usage:\n`/setfile <number>`\nTʜᴇɴ sᴇɴᴅ ᴍᴜʟᴛɪᴘʟᴇ ғɪʟᴇs/messages."
+            "⚠️ Usage:\n`/setfile <number>`\nThen send multiple files or messages."
         )
 
     key = message.command[1].strip()
@@ -178,7 +174,7 @@ async def set_file_cmd(client: Bot, message: Message):
     STOP_KEYBOARD = ReplyKeyboardMarkup([["STOP"]], resize_keyboard=True)
 
     await message.reply(
-        "Send all media messages you want to include under this key.\n\n"
+        "📥 Send all media messages you want to include under this key.\n\n"
         "Press STOP when you're done.",
         reply_markup=STOP_KEYBOARD
     )
@@ -188,7 +184,7 @@ async def set_file_cmd(client: Bot, message: Message):
             user_msg = await client.ask(
                 chat_id=message.chat.id,
                 text="Waiting for media messages...\nPress STOP to finish.",
-                timeout=30  # wait 30 seconds per message
+                timeout=30  # wait 30 seconds for next input
             )
         except asyncio.TimeoutError:
             break
@@ -197,12 +193,12 @@ async def set_file_cmd(client: Bot, message: Message):
         if user_msg.text and user_msg.text.strip().upper() == "STOP":
             break
 
-        # Only store media messages
+        # Allow only media
         if not (user_msg.document or user_msg.video or user_msg.audio or user_msg.photo):
             await message.reply("❌ Unsupported message type, ignored.")
             continue
 
-        # Store file ID only
+        # Get file_id
         if user_msg.document:
             fid = user_msg.document.file_id
         elif user_msg.video:
@@ -210,46 +206,46 @@ async def set_file_cmd(client: Bot, message: Message):
         elif user_msg.audio:
             fid = user_msg.audio.file_id
         elif user_msg.photo:
-            # photo is a list of sizes, take the highest quality
             fid = user_msg.photo[-1].file_id
         else:
             continue
 
         collected.append((user_msg.chat.id, fid))
-        await message.reply(f"✅ File added ({len(collected)} total)")
+        await message.reply(f"✅ Added ({len(collected)} total)")
 
-    await message.reply("✅ Batch collection complete.", reply_markup=ReplyKeyboardRemove())
+    await message.reply("✅ Collection finished.", reply_markup=ReplyKeyboardRemove())
 
     if not collected:
-        return await message.reply("❌ No media messages were added to this key.")
+        return await message.reply("❌ No valid media messages were added.")
 
-    # Save all collected file IDs under the same key
+    # Store all collected file_ids under key
     for chat_id, fid in collected:
         await db.add_file_to_key(key, chat_id, fid)
 
-    await message.reply(f"✅ All collected media messages saved under key `{key}`.")
+    await message.reply(f"✅ All {len(collected)} files stored under key `{key}` successfully.")
 
 
 # =========================
-# /listfile Command (Shows all IDs for each key)
+# /listfile Command
 # =========================
 @Bot.on_message(filters.command("listfile") & filters.private & admin)
 async def list_files_cmd(client: Bot, message: Message):
     files = await db.list_files()
     if not files:
-        return await message.reply_text("📂 Nᴏ ғɪʟᴇs sᴀᴠᴇᴅ ʏᴇᴛ.")
+        return await message.reply_text("📂 No files saved yet.")
 
-    text = "📁 𝗦𝗮𝘃𝗲𝗱 𝗙𝗶𝗹𝗲𝘀:\n\n"
+    text = "📁 <b>Saved Files:</b>\n\n"
     for f in files:
         links = []
         for fid in f["file_ids"]:
             links.append(f"[📎](https://t.me/c/{str(f['chat_id']).replace('-100','')}/{fid})")
-        text += f"🔹 `{f['key']}` → {' '.join(links)}\n"
+        text += f"🔹 <code>{f['key']}</code> → {' '.join(links)}\n"
+
     await message.reply_text(text, disable_web_page_preview=True)
 
 
 # =========================
-# /delfile Command (Removes all files for key)
+# /delfile Command
 # =========================
 @Bot.on_message(filters.command("delfile") & filters.private & admin)
 async def delete_file_cmd(client: Bot, message: Message):
@@ -259,37 +255,37 @@ async def delete_file_cmd(client: Bot, message: Message):
     key = message.command[1].strip()
     result = await db.delete_file(key)
     if result.deleted_count == 0:
-        return await message.reply_text(f"❌ Nᴏ ғɪʟᴇ ғᴏᴜɴᴅ ғᴏʀ ᴋᴇʏ `{key}`.")
+        return await message.reply_text(f"❌ No file found for key `{key}`.")
 
-    await message.reply_text(f"🗑 Aʟʟ ғɪʟᴇs ғᴏʀ ᴋᴇʏ `{key}` ᴅᴇʟᴇᴛᴇᴅ sᴜᴄᴄᴇssғᴜʟʟʏ.")
+    await message.reply_text(f"🗑 Deleted all files under key `{key}` successfully.")
 
 
 # =========================
-# Auto Reply for Number Messages (Send All Files)
+# Auto Send by Key
 # =========================
 @Bot.on_message(filters.private & filters.text)
 async def send_saved_file(client: Bot, message: Message):
     user_id = message.from_user.id
 
-    # Add user if not already present
+    # Ensure user present
     if not await db.present_user(user_id):
         try:
             await db.add_user(user_id)
         except:
             pass
 
-    # Check if user is banned
+    # Check if banned
     banned_users = await db.get_ban_users()
     if user_id in banned_users:
         return await message.reply_text(
-            "<b>⛔️ You are Bᴀɴɴᴇᴅ from using this bot.</b>\n\n"
+            "<b>⛔️ You are banned from using this bot.</b>\n\n"
             "<i>Contact support if you think this is a mistake.</i>",
             reply_markup=InlineKeyboardMarkup(
                 [[InlineKeyboardButton("Contact Support", url=BAN_SUPPORT)]]
             )
         )
 
-    # ✅ Check Force Subscription
+    # Check subscription
     if not await is_subscribed(client, user_id):
         return await not_joined(client, message)
 
@@ -299,36 +295,36 @@ async def send_saved_file(client: Bot, message: Message):
 
     data = await db.get_file(text)
     if not data:
-        return await message.reply_text("❌ Nᴏ ғɪʟᴇ sᴇᴛ ғᴏʀ ᴛʜɪs ɴᴜᴍʙᴇʀ.")
+        return await message.reply_text("❌ No files found for this key.")
 
     try:
         FILE_AUTO_DELETE = await db.get_del_timer()
-
         sent_msgs = []
+
         for fid in data["file_ids"]:
-            sent = await client.copy_message(
+            sent = await client.send_cached_media(
                 chat_id=message.chat.id,
-                from_chat_id=data["chat_id"],
-                message_id=fid
+                file_id=fid
             )
             sent_msgs.append(sent)
 
         if FILE_AUTO_DELETE > 0:
             notification_msg = await message.reply(
-                f"<b><blockquote>Tʜɪs Fɪʟᴇ(s) ᴡɪʟʟ ʙᴇ Dᴇʟᴇᴛᴇᴅ ɪɴ {get_exp_time(FILE_AUTO_DELETE)}.\n"
-                f"Pʟᴇᴀsᴇ sᴀᴠᴇ ᴏʀ ғᴏʀᴡᴀʀᴅ ᴛʜᴇᴍ ʙᴇғᴏʀᴇ ɪᴛs Dᴇʟᴇᴛᴇᴅ.</blockquote></b>"
+                f"<b><blockquote>This file(s) will be deleted in {get_exp_time(FILE_AUTO_DELETE)}.\n"
+                f"Please save or forward them before they are removed.</blockquote></b>"
             )
-
             await asyncio.sleep(FILE_AUTO_DELETE)
+
             for s in sent_msgs:
                 try:
                     await s.delete()
                 except:
                     pass
+
             try:
                 await notification_msg.delete()
             except:
                 pass
 
     except Exception as e:
-        await message.reply_text(f"⚠️ Failed to send file(s):\n`{e}`")
+        await message.reply_text(f"⚠️ Failed to send files:\n<code>{e}</code>")
